@@ -20,7 +20,6 @@ import {
   DataTable,
   DatePicker,
   Dialog,
-  Direction,
   Drawer,
   DropdownMenu,
   Empty,
@@ -32,8 +31,9 @@ import {
   Item,
   Kbd,
   Label,
+  LogoLockup,
+  LogoMark,
   Menubar,
-  NativeSelect,
   NavigationMenu,
   Pagination,
   Popover,
@@ -53,7 +53,6 @@ import {
   Table,
   Tabs,
   Textarea,
-  Toast,
   Toggle,
   ToggleGroup,
   Tooltip,
@@ -73,7 +72,7 @@ const tiles = [
       </AspectRatio>
     ),
   },
-  { name: "Avatar", element: <Avatar name="Grace Hopper" /> },
+  { name: "Avatar", element: <Avatar name="Charlotte Deane" /> },
   { name: "Badge", element: <Badge label="New" /> },
   { name: "Breadcrumb", element: <Breadcrumb /> },
   { name: "Button", element: <Button>Start assignment</Button> },
@@ -91,7 +90,10 @@ const tiles = [
   { name: "Calendar", element: <Calendar /> },
   { name: "Card", element: <Card /> },
   { name: "Carousel", element: <Carousel /> },
-  { name: "Chart", element: <Chart /> },
+  {
+    name: "Chart",
+    element: <Chart title="Class score trend" timeframe="Last 3 months" />,
+  },
   { name: "Checkbox", element: <Checkbox /> },
   { name: "Collapsible", element: <Collapsible /> },
   { name: "Combobox", element: <Combobox /> },
@@ -100,7 +102,6 @@ const tiles = [
   { name: "Data Table", element: <DataTable /> },
   { name: "Date Picker", element: <DatePicker /> },
   { name: "Dialog", element: <Dialog /> },
-  { name: "Direction", element: <Direction /> },
   { name: "Drawer", element: <Drawer /> },
   { name: "Dropdown Menu", element: <DropdownMenu /> },
   { name: "Empty", element: <Empty /> },
@@ -109,11 +110,21 @@ const tiles = [
   { name: "Input", element: <Input /> },
   { name: "Input Group", element: <InputGroup /> },
   { name: "Input OTP", element: <InputOTP /> },
-  { name: "Item", element: <Item>Question bank item</Item> },
+  {
+    name: "Item",
+    element: (
+      <Item
+        title="Question bank item"
+        description="Quadratics • 12 questions"
+        actionLabel="Open"
+      />
+    ),
+  },
   { name: "Kbd", element: <Kbd /> },
   { name: "Label", element: <Label>Assignment name</Label> },
+  { name: "Logo Mark", element: <LogoMark /> },
+  { name: "Logo Lockup", element: <LogoLockup /> },
   { name: "Menubar", element: <Menubar /> },
-  { name: "Native Select", element: <NativeSelect /> },
   { name: "Navigation Menu", element: <NavigationMenu /> },
   { name: "Pagination", element: <Pagination /> },
   { name: "Popover", element: <Popover /> },
@@ -133,7 +144,6 @@ const tiles = [
   { name: "Table", element: <Table /> },
   { name: "Tabs", element: <Tabs /> },
   { name: "Textarea", element: <Textarea /> },
-  { name: "Toast", element: <Toast /> },
   { name: "Toggle", element: <Toggle /> },
   { name: "Toggle Group", element: <ToggleGroup /> },
   { name: "Tooltip", element: <Tooltip /> },

@@ -30,8 +30,8 @@ export const defaultDataTable = {
   columns: ["Student", "Status", "Score"],
   rows: [
     ["Alex", "Submitted", "92"],
-    ["Jordan", "In progress", "--"],
-    ["Priya", "Submitted", "88"],
+    ["Teddy", "In progress", "--"],
+    ["Gandalf", "Submitted", "88"],
   ],
 };
 
@@ -42,11 +42,9 @@ export const defaultTabs = [
 ];
 
 export const defaultChartData = [
-  { label: "Mon", value: 3 },
-  { label: "Tue", value: 5 },
-  { label: "Wed", value: 2 },
-  { label: "Thu", value: 6 },
-  { label: "Fri", value: 4 },
+  { label: "Jan", value: 12 },
+  { label: "Feb", value: 18 },
+  { label: "Mar", value: 22 },
 ];
 
 export const defaultCarouselItems = [

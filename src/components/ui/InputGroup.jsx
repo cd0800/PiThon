@@ -1,9 +1,19 @@
-export function InputGroup({ prefix = "Score", suffix = "%" }) {
+export function InputGroup({
+  label = "Search",
+  helper = "Press Enter or click Search.",
+  buttonLabel = "Search",
+  placeholder = "Search assignments",
+}) {
   return (
-    <div className="ui-input-group">
-      <span className="ui-input-prefix">{prefix}</span>
-      <input className="ui-input" placeholder="85" />
-      <span className="ui-input-suffix">{suffix}</span>
+    <div className="ui-field">
+      <label className="ui-label">{label}</label>
+      <div className="ui-input-group">
+        <input className="ui-input" type="search" placeholder={placeholder} />
+        <button className="ui-input-button" type="button">
+          {buttonLabel}
+        </button>
+      </div>
+      <div className="ui-input-helper">{helper}</div>
     </div>
   );
 }

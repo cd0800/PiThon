@@ -41,6 +41,17 @@
   position: relative;
 }
 
+.app-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.app-logo-mark {
+  width: 52px;
+  height: auto;
+}
+
 .app-kicker {
   font-size: 0.75rem;
   text-transform: uppercase;
@@ -112,6 +123,10 @@
 
   .app-header {
     grid-template-columns: 1fr;
+  }
+
+  .app-logo-mark {
+    width: 48px;
   }
 }
 
