@@ -1,0 +1,61 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=IBM+Plex+Mono:wght@500&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+:root {
+  --bg: #fff8f0;
+  --bg-alt: #f4d06f;
+  --surface: #fff8f0;
+  --surface-2: rgba(244, 208, 111, 0.35);
+  --text: #392f5a;
+  --muted: rgba(57, 47, 90, 0.7);
+  --accent: #fa9d01;
+  --accent-strong: #007ca6;
+  --accent-warm: #f4d06f;
+  --border: rgba(57, 47, 90, 0.2);
+  --shadow: 0 16px 30px rgba(57, 47, 90, 0.18);
+  --on-accent: #fff8f0;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: "Space Grotesk", system-ui, sans-serif;
+  --heading: "Fraunces", "Times New Roman", serif;
+  color: var(--text);
+  background: var(--bg);
+  font: 16px/1.6 var(--sans);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(0, 124, 166, 0.18), transparent 45%),
+    radial-gradient(circle at 85% 0%, rgba(250, 157, 1, 0.25), transparent 40%),
+    linear-gradient(135deg, var(--bg), rgba(244, 208, 111, 0.35));
+  color: var(--text);
+}
+
+#root {
+  max-width: 1240px;
+  margin: 0 auto;
+}
+
+a {
+  color: inherit;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+::selection {
+  background: rgba(0, 124, 166, 0.25);
+}
