@@ -7,9 +7,17 @@ import {
   LogoMark,
   NavigationMenu,
 } from "./components/ui/index.js";
+import {
+  EmailVerification,
+  Login,
+  PasswordReset,
+  SignUp,
+} from "./components/auth/index.js";
 
 const navItems = [
   { label: "Home", href: "#/" },
+  { label: "Teacher", href: "#/teacher" },
+  { label: "Student", href: "#/student" },
   { label: "About", href: "#/about" },
   { label: "Contact", href: "#/contact" },
   { label: "Help", href: "#/help" },
@@ -36,9 +44,43 @@ const helpTopics = [
   },
 ];
 
+const teacherCards = [
+  { label: "Class overview", className: "dashboard-tile compact" },
+  { label: "Assignment status", className: "dashboard-tile compact" },
+  { label: "Activity image", className: "dashboard-image-slot", empty: true },
+  { label: "Progress snapshot", className: "dashboard-tile wide" },
+  { label: "Upcoming checks", className: "dashboard-tile compact" },
+];
+
+const studentCards = [
+  { label: "Daily goal", className: "dashboard-tile compact" },
+  { label: "Practice image", className: "dashboard-image-slot", empty: true },
+  { label: "Feedback image", className: "dashboard-image-slot", empty: true },
+  { label: "Current lesson", className: "dashboard-tile wide" },
+  { label: "Streak", className: "dashboard-tile compact" },
+];
+
+const dashboardNav = {
+  teacher: ["Home", "Profile", "Classes", "Assignments", "Analytics"],
+  student: ["Home", "Profile", "Assignments", "Feedback", "Progress", "Practice"],
+};
+
 function getPageFromHash() {
   const route = window.location.hash.replace("#/", "") || "home";
-  return ["home", "about", "contact", "help"].includes(route) ? route : "home";
+  return [
+    "home",
+    "about",
+    "contact",
+    "help",
+    "login",
+    "signup",
+    "password-reset",
+    "verify-email",
+    "teacher",
+    "student",
+  ].includes(route)
+    ? route
+    : "home";
 }
 
 function GeometricScrollPattern() {
@@ -134,12 +176,10 @@ function HomePage() {
         <div className="homepage-copy">
           <h1 id="homepage-title">Build confident problem solvers with PiThon.</h1>
           <p>
-            A friendly classroom workspace for practice, feedback, and progress
-            that feels clear from the first click.
+            A friendly classroom workspace for practice, feedback, and progress.
           </p>
           <div className="homepage-actions">
             <Button className="homepage-cta">Start now</Button>
-            <Button variant="secondary">Explore lessons</Button>
           </div>
         </div>
         <div className="homepage-preview" aria-label="PiThon preview">
@@ -150,15 +190,15 @@ function HomePage() {
       <section className="homepage-features" aria-label="PiThon highlights">
         <Card
           title="Guided practice"
-          body="Short activities help students build fluency without losing momentum."
+          body="Short activities help students build skill without losing momentum."
         />
         <Card
           title="Clear feedback"
-          body="Teachers can spot effort, gaps, and growth from one calm dashboard."
+          body="Teachers can spot progress and gaps from one calm dashboard."
         />
         <Card
-          title="Ready to share"
-          body="Start quickly with a public-facing page that points families in."
+          title="Fun"
+          body="Engaging question sets that keep learning exciting"
         />
       </section>
     </>
@@ -169,7 +209,6 @@ function AboutPage() {
   return (
     <section className="page-panel about-section" aria-labelledby="about-title">
       <div className="section-copy">
-        <span className="section-kicker">About PiThon</span>
         <h1 id="about-title">Practice that feels calm enough to keep going.</h1>
         <p>
           PiThon is designed for classrooms where students need room to try,
@@ -247,13 +286,61 @@ function HelpPage() {
   );
 }
 
+function DashboardHomePage({ role }) {
+  const title = `${role[0].toUpperCase()}${role.slice(1)} homepage`;
+  const cards = role === "teacher" ? teacherCards : studentCards;
+
+  return (
+    <section
+      className={`dashboard-page dashboard-page-${role}`}
+      aria-labelledby={`${role}-homepage-title`}
+    >
+      <div className="dashboard-shell">
+        <aside className="dashboard-rail" aria-label={`${role} dashboard navigation`}>
+          {dashboardNav[role].map((item) => (
+            <a href={`#/${role}`} key={item}>
+              {item}
+            </a>
+          ))}
+        </aside>
+        <div className="dashboard-board">
+          <div className="dashboard-title-bar" aria-hidden="true" />
+          <div className="dashboard-grid">
+            {cards.map((card) =>
+              card.empty ? (
+                <div
+                  className={card.className}
+                  aria-label={`${card.label} placeholder`}
+                  key={card.label}
+                />
+              ) : (
+                <article className={card.className} key={card.label}>
+                  <span>{card.label}</span>
+                </article>
+              )
+            )}
+          </div>
+        </div>
+        <div className="dashboard-profile-dot" aria-hidden="true" />
+      </div>
+      <h1 id={`${role}-homepage-title`}>{title}</h1>
+    </section>
+  );
+}
+
 function App() {
   const page = usePageRoute();
   const pageContent = {
     home: <HomePage />,
+    teacher: <DashboardHomePage role="teacher" />,
+    student: <DashboardHomePage role="student" />,
     about: <AboutPage />,
     contact: <ContactPage />,
     help: <HelpPage />,
+    login: <Login />,
+    signup: <SignUp />,
+    "password-reset": <PasswordReset />,
+    "verify-email": <EmailVerification />,
   };
   const activeNavItems = navItems.map((item) => ({
     ...item,
@@ -268,11 +355,24 @@ function App() {
         </a>
         <NavigationMenu items={activeNavItems} />
         <div className="homepage-auth">
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              window.location.hash = "#/login";
+            }}
+          >
             Log in
           </Button>
-          <Button size="sm">Sign up</Button>
-        </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              window.location.hash = "#/signup";
+            }}
+          >
+            Sign up
+          </Button>
+         </div>
       </header>
 
       {pageContent[page]}
