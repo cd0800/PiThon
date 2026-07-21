@@ -1,20 +1,29 @@
 import { useState } from "react";
+import { requestEmailVerification } from "../../services/api.js";
 import { Button } from "../ui/index.js";
 import { AuthShell } from "./AuthShell.jsx";
 
 export function SignUp() {
   const [role, setRole] = useState("student");
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const pendingUser = {
+      email: String(formData.get("email") || "").trim(),
+      username: String(formData.get("username") || "").trim(),
+      role,
+    };
+
+    try {
+      await requestEmailVerification(pendingUser);
+    } catch {
+      // Keep the local demo flow available when the API server is not running.
+    }
 
     window.localStorage.setItem(
       "pithonPendingVerification",
-      JSON.stringify({
-        email: formData.get("email"),
-        role,
-      })
+      JSON.stringify(pendingUser)
     );
     window.location.hash = "#/verify-email";
   };

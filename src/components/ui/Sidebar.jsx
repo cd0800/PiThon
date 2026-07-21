@@ -14,6 +14,8 @@ export function Sidebar({ items = ["Overview", "Assignments", "Grades"] }) {
         return {
           label,
           icon: item.icon ?? label.slice(0, 1).toUpperCase(),
+          href: item.href ?? "#",
+          current: Boolean(item.current),
         };
       }),
     [items]
@@ -33,7 +35,12 @@ export function Sidebar({ items = ["Overview", "Assignments", "Grades"] }) {
       </button>
       <nav className="ui-sidebar-nav">
         {normalizedItems.map((item) => (
-          <a key={item.label} className="ui-sidebar-link" href="#">
+          <a
+            key={item.label}
+            aria-current={item.current ? "page" : undefined}
+            className="ui-sidebar-link"
+            href={item.href}
+          >
             <span className="ui-sidebar-icon" aria-hidden="true">
               {item.icon}
             </span>

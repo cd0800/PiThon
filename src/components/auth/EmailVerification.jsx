@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { verifyEmailCode } from "../../services/api.js";
 import { Button, InputOTP } from "../ui/index.js";
 import { AuthShell } from "./AuthShell.jsx";
 
@@ -16,7 +17,7 @@ export function EmailVerification() {
     }
   }, []);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     const enteredCode = Array.from(
       event.currentTarget.querySelectorAll(".ui-otp-input")
@@ -29,9 +30,31 @@ export function EmailVerification() {
       return;
     }
 
+    const role = pendingVerification.role === "teacher" ? "teacher" : "student";
+
+    try {
+      const result = await verifyEmailCode({
+        code: enteredCode,
+        email: pendingVerification.email,
+        role,
+        username: pendingVerification.username,
+      });
+
+      if (!result.verified) {
+        setError(result.reason || "Verification failed.");
+        return;
+      }
+    } catch {
+      // Keep the local demo flow available when the API server is not running.
+    }
+
     window.localStorage.removeItem("pithonPendingVerification");
-    window.location.hash =
-      pendingVerification.role === "teacher" ? "#/teacher" : "#/student";
+    window.localStorage.setItem("pithonCurrentRole", role);
+    window.localStorage.setItem(
+      "pithonCurrentUsername",
+      pendingVerification.username || ""
+    );
+    window.location.hash = `#/${role}`;
   };
 
   return (
