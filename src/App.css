@@ -449,6 +449,12 @@ html {
   justify-self: start;
 }
 
+.form-success {
+  margin: 0;
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
 .help-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1062,6 +1068,35 @@ html {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.question-result-notice {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--surface);
+}
+
+.question-result-notice strong {
+  display: block;
+  color: var(--text);
+  font-family: var(--heading);
+  font-size: 1rem;
+}
+
+.question-result-notice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.question-result-notice.is-correct {
+  border-color: rgba(37, 127, 83, 0.35);
+  background: rgba(37, 127, 83, 0.08);
+}
+
+.question-result-notice.is-incorrect {
+  border-color: rgba(173, 67, 54, 0.35);
+  background: rgba(173, 67, 54, 0.08);
 }
 
 .student-feedback-row {

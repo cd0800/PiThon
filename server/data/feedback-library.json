@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "id": "feedback-arithmetic-carrying",
+    "topicId": "arithmetic",
+    "commonError": "Forgetting to carry when ones add to more than 9.",
+    "hint": "Check the ones column first, then carry the extra ten.",
+    "workedExample": "18 + 27 = 45 because 8 + 7 makes 15, so 1 ten is carried.",
+    "steps": [
+      "Add ones.",
+      "Carry if needed.",
+      "Add tens including the carried ten."
+    ]
+  },
+  {
+    "id": "feedback-algebra-inverse",
+    "topicId": "basic-algebra",
+    "commonError": "Using the same operation instead of the inverse operation.",
+    "hint": "Undo addition with subtraction, and undo multiplication with division.",
+    "workedExample": "x + 7 = 12 becomes x = 12 - 7, so x = 5.",
+    "steps": [
+      "Identify the operation attached to x.",
+      "Apply the inverse operation to both sides.",
+      "Simplify the result."
+    ]
+  }
+]

@@ -5,13 +5,15 @@ import { AuthShell } from "./AuthShell.jsx";
 
 export function Login() {
   const [error, setError] = useState("");
+  const [role, setRole] = useState("student");
 
   const completeLogin = ({ role, token, username }) => {
     window.localStorage.setItem("pithonCurrentRole", role);
     window.localStorage.setItem("pithonCurrentUsername", username);
 
     if (token) {
-      window.localStorage.setItem("pithonAuthToken", token);
+      window.localStorage.removeItem("pithonAuthToken");
+      window.sessionStorage.setItem("pithonAuthToken", token);
     }
 
     window.location.hash = `#/${role}`;
@@ -24,12 +26,9 @@ export function Login() {
     const formData = new FormData(event.currentTarget);
     const username = String(formData.get("username") || "").trim();
     const password = String(formData.get("password") || "");
-    const fallbackRole = username.toLowerCase().includes("teacher")
-      ? "teacher"
-      : "student";
 
     try {
-      const result = await loginUser({ username, password });
+      const result = await loginUser({ password, role, username });
 
       if (!result.granted) {
         setError(result.reason || "Access denied.");
@@ -41,17 +40,30 @@ export function Login() {
         token: result.token,
         username: result.user.username,
       });
-    } catch {
-      completeLogin({ role: fallbackRole, username });
+    } catch (loginError) {
+      setError(loginError.message || "Could not log in.");
     }
   };
 
   return (
     <AuthShell kicker="Welcome back" title="Log in to PiThon">
       <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="auth-role-toggle" aria-label="Choose account type">
+          {["student", "teacher"].map((option) => (
+            <button
+              aria-pressed={role === option}
+              className="auth-role-option"
+              key={option}
+              onClick={() => setRole(option)}
+              type="button"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
         <label>
           Username
-          <input autoComplete="username" name="username" type="text" />
+          <input autoComplete="username" name="username" required type="text" />
         </label>
         <label>
           Password

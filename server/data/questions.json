@@ -1,1 +1,363 @@
-[]
+[
+  {
+    "id": "arithmetic-addition-001",
+    "topicId": "arithmetic",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Calculate: 18 + 27",
+    "expectedAnswer": "45",
+    "hint": "Add the ones, then add the tens.",
+    "workedExample": "18 + 27 = 18 + 20 + 7 = 38 + 7 = 45.",
+    "steps": [
+      "Add the ones: 8 + 7 = 15.",
+      "Write 5 in the ones place and carry 1 ten.",
+      "Add the tens: 1 + 1 + 2 = 4 tens."
+    ],
+    "commonError": "Forgetting to carry the extra ten from 8 + 7.",
+    "visualLabel": "Number work"
+  },
+  {
+    "id": "arithmetic-subtraction-001",
+    "topicId": "arithmetic",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Calculate: 63 - 28",
+    "expectedAnswer": "35",
+    "hint": "Regroup one ten before subtracting the ones.",
+    "workedExample": "63 - 28 = 53 - 18 = 35.",
+    "steps": [
+      "Regroup 63 as 5 tens and 13 ones.",
+      "Subtract the ones: 13 - 8 = 5.",
+      "Subtract the tens: 5 - 2 = 3 tens."
+    ],
+    "commonError": "Subtracting 3 - 8 without regrouping.",
+    "visualLabel": "Column subtraction"
+  },
+  {
+    "id": "arithmetic-multiplication-001",
+    "topicId": "arithmetic",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Calculate: 14 x 6",
+    "expectedAnswer": "84",
+    "hint": "Break 14 into 10 and 4, then multiply each part by 6.",
+    "workedExample": "14 x 6 = (10 x 6) + (4 x 6) = 60 + 24 = 84.",
+    "steps": [
+      "Split 14 into 10 and 4.",
+      "Multiply 10 x 6 = 60.",
+      "Multiply 4 x 6 = 24.",
+      "Add 60 + 24 = 84."
+    ],
+    "commonError": "Multiplying only the ones digit and forgetting the ten.",
+    "visualLabel": "Area model"
+  },
+  {
+    "id": "arithmetic-division-001",
+    "topicId": "arithmetic",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Calculate: 72 / 8",
+    "expectedAnswer": "9",
+    "hint": "Think of the multiplication fact that uses 8 and gives 72.",
+    "workedExample": "8 x 9 = 72, so 72 / 8 = 9.",
+    "steps": [
+      "Ask: 8 times what equals 72?",
+      "Use the fact 8 x 9 = 72.",
+      "So the quotient is 9."
+    ],
+    "commonError": "Using 8 x 8 = 64 and stopping too early.",
+    "visualLabel": "Division facts"
+  },
+  {
+    "id": "arithmetic-fractions-001",
+    "topicId": "arithmetic",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Calculate: 1/4 + 2/4",
+    "expectedAnswer": "3/4",
+    "hint": "The denominators are already the same.",
+    "workedExample": "1/4 + 2/4 = (1 + 2)/4 = 3/4.",
+    "steps": [
+      "Check the denominators: both are fourths.",
+      "Add the numerators: 1 + 2 = 3.",
+      "Keep the denominator as 4."
+    ],
+    "commonError": "Adding the denominators to get 3/8.",
+    "visualLabel": "Fraction tiles"
+  },
+  {
+    "id": "arithmetic-decimals-001",
+    "topicId": "arithmetic",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Calculate: 3.5 + 2.4",
+    "expectedAnswer": "5.9",
+    "hint": "Line up the decimal points before adding.",
+    "workedExample": "3.5 + 2.4 = 5.9.",
+    "steps": [
+      "Add the tenths: 0.5 + 0.4 = 0.9.",
+      "Add the whole numbers: 3 + 2 = 5.",
+      "Combine them to get 5.9."
+    ],
+    "commonError": "Ignoring place value around the decimal point.",
+    "visualLabel": "Decimal line"
+  },
+  {
+    "id": "arithmetic-percentages-001",
+    "topicId": "arithmetic",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Find 25% of 80",
+    "expectedAnswer": "20",
+    "hint": "25% is one quarter.",
+    "workedExample": "25% of 80 = 80 / 4 = 20.",
+    "steps": [
+      "Rewrite 25% as 1/4.",
+      "Divide 80 by 4.",
+      "80 / 4 = 20."
+    ],
+    "commonError": "Multiplying by 25 instead of using 25%.",
+    "visualLabel": "Percent bar"
+  },
+  {
+    "id": "arithmetic-order-operations-001",
+    "topicId": "arithmetic",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Calculate: 6 + 3 x 4",
+    "expectedAnswer": "18",
+    "hint": "Do multiplication before addition.",
+    "workedExample": "6 + 3 x 4 = 6 + 12 = 18.",
+    "steps": [
+      "Multiply first: 3 x 4 = 12.",
+      "Then add 6.",
+      "6 + 12 = 18."
+    ],
+    "commonError": "Adding 6 + 3 first to get 36.",
+    "visualLabel": "Order rules"
+  },
+  {
+    "id": "arithmetic-rounding-001",
+    "topicId": "arithmetic",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Round 347 to the nearest ten",
+    "expectedAnswer": "350",
+    "hint": "Look at the ones digit.",
+    "workedExample": "347 rounds to 350 because the ones digit is 7.",
+    "steps": [
+      "Find the tens digit: 4.",
+      "Check the ones digit: 7.",
+      "Because 7 is 5 or more, round up to 350."
+    ],
+    "commonError": "Rounding down even though the ones digit is 7.",
+    "visualLabel": "Number line"
+  },
+  {
+    "id": "arithmetic-negative-001",
+    "topicId": "arithmetic",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Calculate: -6 + 14",
+    "expectedAnswer": "8",
+    "hint": "Move 14 steps right from -6.",
+    "workedExample": "-6 + 14 = 8.",
+    "steps": [
+      "Start at -6.",
+      "Adding 14 moves right on the number line.",
+      "After 14 steps, you land on 8."
+    ],
+    "commonError": "Keeping the negative sign because the first number is negative.",
+    "visualLabel": "Integer line"
+  },
+  {
+    "id": "basic-algebra-equation-001",
+    "topicId": "basic-algebra",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Solve for x: x + 7 = 12",
+    "expectedAnswer": "5",
+    "hint": "Subtract 7 from both sides.",
+    "workedExample": "x + 7 = 12, so x = 12 - 7 = 5.",
+    "steps": [
+      "Start with x + 7 = 12.",
+      "Undo +7 by subtracting 7 from both sides.",
+      "x = 5."
+    ],
+    "commonError": "Adding 7 again instead of using the inverse operation.",
+    "visualLabel": "Equation balance"
+  },
+  {
+    "id": "basic-algebra-equation-002",
+    "topicId": "basic-algebra",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Solve for x: x - 4 = 9",
+    "expectedAnswer": "13",
+    "hint": "Add 4 to both sides.",
+    "workedExample": "x - 4 = 9, so x = 9 + 4 = 13.",
+    "steps": [
+      "Start with x - 4 = 9.",
+      "Undo -4 by adding 4 to both sides.",
+      "x = 13."
+    ],
+    "commonError": "Subtracting 4 again instead of adding it back.",
+    "visualLabel": "Equation balance"
+  },
+  {
+    "id": "basic-algebra-equation-003",
+    "topicId": "basic-algebra",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Solve for x: 3x = 21",
+    "expectedAnswer": "7",
+    "hint": "Divide both sides by 3.",
+    "workedExample": "3x = 21, so x = 21 / 3 = 7.",
+    "steps": [
+      "Start with 3x = 21.",
+      "Undo multiplication by 3 using division.",
+      "21 / 3 = 7."
+    ],
+    "commonError": "Subtracting 3 from 21 instead of dividing.",
+    "visualLabel": "Equation balance"
+  },
+  {
+    "id": "basic-algebra-equation-004",
+    "topicId": "basic-algebra",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Solve for x: 2x + 5 = 17",
+    "expectedAnswer": "6",
+    "hint": "Undo the addition first, then divide.",
+    "workedExample": "2x + 5 = 17, so 2x = 12 and x = 6.",
+    "steps": [
+      "Subtract 5 from both sides: 2x = 12.",
+      "Divide both sides by 2.",
+      "x = 6."
+    ],
+    "commonError": "Dividing 17 by 2 before removing the 5.",
+    "visualLabel": "Two-step equation"
+  },
+  {
+    "id": "basic-algebra-substitution-001",
+    "topicId": "basic-algebra",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "If x = 4, calculate 3x + 2",
+    "expectedAnswer": "14",
+    "hint": "Replace x with 4 before multiplying.",
+    "workedExample": "3x + 2 = 3(4) + 2 = 12 + 2 = 14.",
+    "steps": [
+      "Replace x with 4.",
+      "Multiply 3 x 4 = 12.",
+      "Add 12 + 2 = 14."
+    ],
+    "commonError": "Adding before multiplying, or treating 3x as 34.",
+    "visualLabel": "Substitution"
+  },
+  {
+    "id": "basic-algebra-substitution-002",
+    "topicId": "basic-algebra",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "If n = 6, calculate n + 9",
+    "expectedAnswer": "15",
+    "hint": "Replace n with 6.",
+    "workedExample": "n + 9 = 6 + 9 = 15.",
+    "steps": [
+      "Replace n with 6.",
+      "Calculate 6 + 9.",
+      "The value is 15."
+    ],
+    "commonError": "Leaving n in the answer instead of substituting.",
+    "visualLabel": "Substitution"
+  },
+  {
+    "id": "basic-algebra-expression-001",
+    "topicId": "basic-algebra",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Simplify: 4a + 3a",
+    "expectedAnswer": "7a",
+    "hint": "Combine like terms.",
+    "workedExample": "4a + 3a = 7a.",
+    "steps": [
+      "Both terms contain a.",
+      "Add the coefficients: 4 + 3 = 7.",
+      "Keep the variable a."
+    ],
+    "commonError": "Writing 7a squared even though only addition was used.",
+    "visualLabel": "Like terms"
+  },
+  {
+    "id": "basic-algebra-expression-002",
+    "topicId": "basic-algebra",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Simplify: 5y - 2y + 3",
+    "expectedAnswer": "3y + 3",
+    "hint": "Combine the y terms and keep the constant.",
+    "workedExample": "5y - 2y + 3 = 3y + 3.",
+    "steps": [
+      "Combine like terms: 5y - 2y = 3y.",
+      "The constant 3 stays separate.",
+      "The simplified expression is 3y + 3."
+    ],
+    "commonError": "Combining y terms with the constant 3.",
+    "visualLabel": "Like terms"
+  },
+  {
+    "id": "basic-algebra-pattern-001",
+    "topicId": "basic-algebra",
+    "difficulty": "easy",
+    "points": 10,
+    "rating": 1,
+    "prompt": "Find the next number: 4, 7, 10, 13, ...",
+    "expectedAnswer": "16",
+    "hint": "Look at how much the pattern increases each time.",
+    "workedExample": "The pattern adds 3 each time, so 13 + 3 = 16.",
+    "steps": [
+      "Find the difference: 7 - 4 = 3.",
+      "Check the pattern continues by adding 3.",
+      "Add 3 to 13 to get 16."
+    ],
+    "commonError": "Changing the rule partway through the pattern.",
+    "visualLabel": "Number pattern"
+  },
+  {
+    "id": "basic-algebra-inequality-001",
+    "topicId": "basic-algebra",
+    "difficulty": "medium",
+    "points": 20,
+    "rating": 2,
+    "prompt": "Solve: x + 3 > 10",
+    "expectedAnswer": "x > 7",
+    "hint": "Subtract 3 from both sides.",
+    "workedExample": "x + 3 > 10, so x > 7.",
+    "steps": [
+      "Start with x + 3 > 10.",
+      "Subtract 3 from both sides.",
+      "x > 7."
+    ],
+    "commonError": "Writing x = 7 instead of an inequality.",
+    "visualLabel": "Inequality line"
+  }
+]

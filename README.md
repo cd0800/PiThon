@@ -1,18 +1,68 @@
-# React + Vite
+# PiThon
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+PiThon is a React and Vite learning dashboard with a local SQLite-backed API.
 
-Currently, two official plugins are available:
+## Run Locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Install dependencies:
 
-## React Compiler
+```bash
+npm install
+```
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+Start the backend API:
 
-Note: This will impact Vite dev & build performances.
+```bash
+npm run backend
+```
 
-## Expanding the ESLint configuration
+Start the frontend in a second terminal:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run dev
+```
+
+The frontend proxies `/api` requests to the backend during development.
+
+For a production-style local run:
+
+```bash
+npm run build
+npm start
+```
+
+The Node server serves `dist` when it exists and continues to expose `/api`.
+
+## Current Data
+
+The app is wired for users, classes, assignments, questions, answers, progress, and feedback. Runtime data is stored in `server/data/pithon.sqlite`, which is created automatically when the backend starts.
+
+The JSON files in `server/data` are seed/import files. They are used to initialise SQLite when a collection is empty; the running app reads and writes SQLite.
+
+Set `PITHON_DATA_KEY` in production so encrypted user fields are protected by an environment-specific key.
+
+Optional production environment variables:
+
+- `PITHON_DATA_KEY`: secret key used for encrypted user fields.
+- `PITHON_ALLOWED_ORIGIN`: browser origin allowed to call the API.
+- `PORT`: API/static server port.
+
+Security notes:
+
+- Passwords are hashed with `scrypt`.
+- Session tokens are stored hashed in SQLite and expire after 8 hours.
+- Browser bearer tokens are kept in `sessionStorage`.
+- The server applies security headers, JSON body limits, basic rate limiting, and protected-route authorization checks.
+
+The seeded question topics are:
+
+- Arithmetic
+- Basic algebra
+
+## Checks
+
+```bash
+npm run lint
+npm run build
+node --check server/server.js
+```

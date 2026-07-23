@@ -1,0 +1,12 @@
+[
+  {
+    "id": "arithmetic",
+    "label": "Arithmetic",
+    "description": "Whole numbers, fractions, decimals, percentages, and order of operations."
+  },
+  {
+    "id": "basic-algebra",
+    "label": "Basic algebra",
+    "description": "Variables, expressions, simple equations, substitution, and patterns."
+  }
+]

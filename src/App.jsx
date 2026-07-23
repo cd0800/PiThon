@@ -24,13 +24,21 @@ import {
   checkAnswer,
   createAssignment,
   createClass,
+  getAssignmentResults,
   getAssignments,
+  getClassScoreboard,
   getClasses,
   getDashboardData,
   getFeedback,
+  getNotifications,
   getPracticeQuestion,
   getProgress,
+  getQuestionDelivery,
+  getStudentClasses,
+  getTeacherAnalytics,
   getTopics,
+  joinClass,
+  updateAssignment,
 } from "./services/api.js";
 
 const navItems = [
@@ -61,21 +69,6 @@ const helpTopics = [
   },
 ];
 
-const fallbackQuestionTopics = [
-  {
-    id: "arithmetic",
-    label: "Arithmetic",
-    description:
-      "Whole numbers, fractions, decimals, percentages, and order of operations.",
-  },
-  {
-    id: "basic-algebra",
-    label: "Basic algebra",
-    description:
-      "Variables, expressions, simple equations, substitution, and patterns.",
-  },
-];
-
 const dashboardNav = {
   teacher: [
     { label: "Home", icon: "H", href: "#/teacher" },
@@ -87,6 +80,7 @@ const dashboardNav = {
   student: [
     { label: "Home", icon: "H", href: "#/student" },
     { label: "Profile", icon: "P", href: "#/student/profile" },
+    { label: "Classes", icon: "C", href: "#/student/classes" },
     { label: "Assignments", icon: "A", href: "#/student/assignments" },
     { label: "Feedback", icon: "F", href: "#/student/feedback" },
     { label: "Progress", icon: "G", href: "#/student/progress" },
@@ -105,17 +99,23 @@ const publicRoutes = [
   "verify-email",
 ];
 
+// Hash routes are explicitly allowed so bad URLs fall back predictably.
 const appRoutes = [
   ...publicRoutes,
   "teacher",
   "teacher/profile",
   "teacher/classes",
   "teacher/classes/create",
+  "teacher/classes/scoreboard",
   "teacher/assignments",
   "teacher/assignments/create",
+  "teacher/assignments/edit",
+  "teacher/assignments/results",
   "teacher/analytics",
   "student",
   "student/profile",
+  "student/classes",
+  "student/classes/scoreboard",
   "student/assignments",
   "student/assignments/detail",
   "student/feedback",
@@ -182,13 +182,31 @@ const dashboardContent = {
   },
 };
 
+// The app is intentionally hash-routed so it works in static hosting.
 function getPageFromHash() {
-  const route = window.location.hash.replace("#/", "") || "home";
+  const route =
+    window.location.hash
+      .replace(/^#\/?/, "")
+      .split(/[?#]/)[0]
+      .replace(/\/+$/, "")
+      .toLowerCase() || "home";
+
   return appRoutes.includes(route) ? route : "home";
 }
 
+// Local role is only trusted when a session token exists.
 function getCurrentRole() {
-  const role = window.localStorage.getItem("pithonCurrentRole");
+  const token =
+    window.sessionStorage.getItem("pithonAuthToken") ||
+    window.localStorage.getItem("pithonAuthToken");
+  const role = String(
+    window.localStorage.getItem("pithonCurrentRole") || ""
+  ).trim().toLowerCase();
+
+  if (!token) {
+    return null;
+  }
+
   return ["teacher", "student"].includes(role) ? role : null;
 }
 
@@ -196,6 +214,7 @@ function getCurrentUsername() {
   return window.localStorage.getItem("pithonCurrentUsername") || "";
 }
 
+// Lightweight loader for dashboard panels that can tolerate empty API data.
 function useAsyncData(loadData, dependencies, fallbackValue) {
   const [data, setData] = useState(fallbackValue);
 
@@ -255,7 +274,7 @@ function useDashboardData(role, username) {
 }
 
 function useTopics() {
-  const [topics, setTopics] = useState(fallbackQuestionTopics);
+  const [topics, setTopics] = useState([]);
 
   useEffect(() => {
     let ignore = false;
@@ -268,7 +287,7 @@ function useTopics() {
       })
       .catch(() => {
         if (!ignore) {
-          setTopics(fallbackQuestionTopics);
+          setTopics([]);
         }
       });
 
@@ -376,7 +395,14 @@ function HomePage() {
             A friendly classroom workspace for practice, feedback, and progress.
           </p>
           <div className="homepage-actions">
-            <Button className="homepage-cta">Start now</Button>
+            <Button
+              className="homepage-cta"
+              onClick={() => {
+                window.location.hash = "#/signup";
+              }}
+            >
+              Start now
+            </Button>
           </div>
         </div>
         <div className="homepage-preview" aria-label="PiThon preview">
@@ -406,11 +432,11 @@ function AboutPage() {
   return (
     <section className="page-panel about-section" aria-labelledby="about-title">
       <div className="section-copy">
-        <h1 id="about-title">Practice that feels calm enough to keep going.</h1>
+        <h1 id="about-title">Practice for everyone.</h1>
         <p>
           PiThon is designed for classrooms where students need room to try,
           revise, and build confidence. Teachers get a clear view of progress
-          while learners stay focused on the next small step.
+          while learners can stay focused on the next step.
         </p>
       </div>
       <div className="about-path" aria-label="PiThon learning flow">
@@ -426,8 +452,10 @@ function AboutPage() {
 }
 
 function ContactPage() {
+  const [sent, setSent] = useState(false);
   const handleContactSubmit = (event) => {
     event.preventDefault();
+    setSent(true);
   };
 
   return (
@@ -451,9 +479,10 @@ function ContactPage() {
         </label>
         <label className="contact-message">
           Message
-          <textarea name="message" placeholder="How can PiThon help?" />
+          <textarea name="message" placeholder="How can we help?" />
         </label>
         <Button className="contact-submit" type="submit">Send message</Button>
+        {sent ? <p className="form-success">Message ready for the PiThon team.</p> : null}
       </form>
     </section>
   );
@@ -519,9 +548,19 @@ function TopicCards({ onSelect, selectedTopicIds = [], topics }) {
   );
 }
 
+function formatTopicLabels(topicIds = [], topics = []) {
+  return (
+    topicIds
+      .map((topicId) => topics.find((topic) => topic.id === topicId)?.label)
+      .filter(Boolean)
+      .join(", ") || "No topic"
+  );
+}
+
 function DashboardFrame({ children, page, role }) {
   const handleLogout = () => {
     window.localStorage.removeItem("pithonAuthToken");
+    window.sessionStorage.removeItem("pithonAuthToken");
     window.localStorage.removeItem("pithonCurrentRole");
     window.localStorage.removeItem("pithonCurrentUsername");
     window.location.hash = "#/";
@@ -550,6 +589,11 @@ function DashboardFrame({ children, page, role }) {
 
 function DashboardHomePage({ page, role, username }) {
   const dashboardData = useDashboardData(role, username);
+  const notifications = useAsyncData(
+    () => getNotifications(username),
+    [username],
+    []
+  );
   const content = {
     ...dashboardContent[role],
     activity: dashboardData?.activity?.length
@@ -564,6 +608,32 @@ function DashboardHomePage({ page, role, username }) {
       : dashboardContent[role].stats,
   };
   const displayName = username || role;
+  const handlePrimaryAction = () => {
+    window.location.hash =
+      role === "teacher" ? "#/teacher/assignments/create" : "#/student/practice";
+  };
+  const handleSecondaryAction = () => {
+    window.location.hash =
+      role === "teacher" ? "#/teacher/analytics" : "#/student/feedback";
+  };
+  const activityItems = [
+    ...notifications.slice(0, 3).map((notification) => ({
+      actionLabel: "Open",
+      description: notification.message,
+      media: "N",
+      title: notification.title || "Notification",
+    })),
+    ...content.activity,
+  ].map((item) => ({
+    actionLabel: role === "teacher" ? "Review" : "Open",
+    description:
+      item.description ||
+      item.prompt ||
+      item.result ||
+      "Recent dashboard activity.",
+    media: item.media || (item.result === "correct" ? "C" : "A"),
+    title: item.title || item.topicId || "Activity",
+  }));
 
   return (
     <DashboardFrame page={page} role={role}>
@@ -579,8 +649,10 @@ function DashboardHomePage({ page, role, username }) {
           <p>{content.description}</p>
         </div>
         <div className="dashboard-actions">
-          <Button>{content.primaryAction}</Button>
-          <Button variant="secondary">{content.secondaryAction}</Button>
+          <Button onClick={handlePrimaryAction}>{content.primaryAction}</Button>
+          <Button variant="secondary" onClick={handleSecondaryAction}>
+            {content.secondaryAction}
+          </Button>
         </div>
       </header>
 
@@ -652,14 +724,23 @@ function DashboardHomePage({ page, role, username }) {
             <span className="section-kicker">Up next</span>
             <h2 id={`${role}-activity-title`}>Activity queue</h2>
           </div>
-          <Button size="sm" variant="ghost">View all</Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              window.location.hash =
+                role === "teacher" ? "#/teacher/analytics" : "#/student/progress";
+            }}
+          >
+            View all
+          </Button>
         </div>
         <Separator />
         <div className="dashboard-activity-list">
-          {content.activity.length ? (
-            content.activity.map((item) => (
+          {activityItems.length ? (
+            activityItems.map((item, index) => (
               <Item
-                key={item.title}
+                key={`${item.title}-${index}`}
                 title={item.title}
                 description={item.description}
                 media={<span>{item.media}</span>}
@@ -691,6 +772,9 @@ function StudentPageHeader({ badge, description, title }) {
 }
 
 function StudentProfilePage({ page, username }) {
+  const records = useAsyncData(() => getProgress(username), [username], []);
+  const topics = useTopics();
+
   return (
     <DashboardFrame page={page} role="student">
       <StudentPageHeader
@@ -704,16 +788,135 @@ function StudentProfilePage({ page, username }) {
             {(username || "S").slice(0, 1).toUpperCase()}
           </div>
           <div className="student-field-stack">
-            <EmptySlot label="Display name" />
-            <EmptySlot label="Email" />
-            <EmptySlot label="Class" />
+            <div className="dashboard-record-card">
+              <strong>{username || "Student"}</strong>
+              <p>Signed in student account</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>{records.length}</strong>
+              <p>Submitted answers</p>
+            </div>
           </div>
         </article>
         <article className="student-panel">
-          <Empty
-            title="No profile details yet"
-            description="Learning preferences, class details, and account notes will appear here."
-          />
+          <div className="dashboard-list-stack">
+            <div className="dashboard-record-card">
+              <strong>Role</strong>
+              <p>Student</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>Current topics</strong>
+              <p>{formatTopicLabels(topics.map((topic) => topic.id), topics)}</p>
+            </div>
+          </div>
+        </article>
+      </section>
+    </DashboardFrame>
+  );
+}
+
+function StudentClassesPage({ page, username }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [error, setError] = useState("");
+  const [joinedMessage, setJoinedMessage] = useState("");
+  const classes = useAsyncData(
+    () => getStudentClasses(username),
+    [username, refreshKey],
+    []
+  );
+
+  const handleJoinClass = async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    setError("");
+    setJoinedMessage("");
+
+    const formData = new FormData(form);
+    const inviteCode = String(formData.get("inviteCode") || "").trim();
+
+    try {
+      const result = await joinClass({
+        inviteCode,
+      });
+
+      if (!result.joined) {
+        setError(result.reason || "Could not join that class.");
+        return;
+      }
+
+      form.reset();
+      setJoinedMessage(`Joined ${result.class.name || "class"}.`);
+      setRefreshKey((current) => current + 1);
+    } catch (joinError) {
+      setError(joinError.message || "Could not join that class.");
+    }
+  };
+
+  return (
+    <DashboardFrame page={page} role="student">
+      <StudentPageHeader
+        badge="Classes"
+        title="Classes"
+        description="Join a teacher class with an invite code to receive assigned work."
+      />
+      <section className="teacher-creator-layout">
+        <form className="dashboard-panel teacher-form-panel" onSubmit={handleJoinClass}>
+          <label className="dashboard-form-field">
+            Invite code
+            <input
+              autoComplete="off"
+              name="inviteCode"
+              required
+              type="text"
+            />
+          </label>
+          {error ? <p className="auth-error">{error}</p> : null}
+          {joinedMessage ? <p className="form-success">{joinedMessage}</p> : null}
+          <div className="student-action-row">
+            <Button type="submit">Join class</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                window.location.hash = "#/student/assignments";
+              }}
+            >
+              View assignments
+            </Button>
+          </div>
+        </form>
+        <article className="dashboard-panel">
+          {classes.length ? (
+            <div className="dashboard-list-stack">
+              {classes.map((classRecord) => (
+                <div className="dashboard-record-card" key={classRecord.id}>
+                  <strong>{classRecord.name || "Untitled class"}</strong>
+                  <p>
+                    {classRecord.yearGroup || "No year"} -{" "}
+                    {classRecord.subject || "No subject"}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      window.localStorage.setItem(
+                        "pithonCurrentClassId",
+                        classRecord.id
+                      );
+                      window.location.hash = "#/student/classes/scoreboard";
+                    }}
+                  >
+                    Scoreboard
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty
+              title="No joined classes yet"
+              description="Use an invite code from your teacher to join a class."
+            />
+          )}
         </article>
       </section>
     </DashboardFrame>
@@ -750,13 +953,24 @@ function StudentAssignmentsPage({ page, username }) {
             >
               <strong>{assignment.title || "Untitled assignment"}</strong>
               <p>{assignment.instructions || "No instructions added."}</p>
+              {assignment.dueDate ? <p>Due {assignment.dueDate}</p> : null}
+              <p>{assignment.questionLimit ?? assignment.questionIds?.length ?? 0} questions</p>
             </a>
           ))
         ) : (
-          <Empty
-            title="No assignments yet"
-            description="Assignments created by a teacher will appear here."
-          />
+          <div className="dashboard-list-stack">
+            <Empty
+              title="No assignments yet"
+              description="Join a class with your teacher's invite code to receive assigned work."
+            />
+            <Button
+              onClick={() => {
+                window.location.hash = "#/student/classes";
+              }}
+            >
+              Join a class
+            </Button>
+          </div>
         )}
       </section>
     </DashboardFrame>
@@ -785,6 +999,8 @@ function StudentAssignmentDetailPage({ page, username }) {
             <div className="dashboard-record-card">
               <strong>{assignment.title || "Untitled assignment"}</strong>
               <p>{assignment.instructions || "No instructions added."}</p>
+              {assignment.dueDate ? <p>Due {assignment.dueDate}</p> : null}
+              <p>{assignment.questionLimit ?? assignment.questionIds?.length ?? 0} questions</p>
             </div>
           ) : (
             <Empty
@@ -795,12 +1011,19 @@ function StudentAssignmentDetailPage({ page, username }) {
           <div className="student-action-row">
             <Button
               onClick={() => {
+                // Assignment mode uses finite teacher question sets.
                 window.location.hash = "#/student/question";
                 window.localStorage.setItem(
                   "pithonCurrentPracticeTopic",
-                  assignment?.topicIds?.[0] || "arithmetic"
+                  assignment?.topicIds?.[0] || ""
                 );
+                window.localStorage.setItem(
+                  "pithonCurrentAssignmentId",
+                  assignment?.id || ""
+                );
+                window.localStorage.setItem("pithonQuestionMode", "assignment");
               }}
+              disabled={!assignment}
             >
               Start
             </Button>
@@ -815,7 +1038,13 @@ function StudentAssignmentDetailPage({ page, username }) {
           </div>
         </article>
         <article className="student-panel">
-          <EmptySlot label="Resource preview" className="is-tall" />
+          <div className="dashboard-record-card">
+            <strong>Practice setup</strong>
+            <p>
+              Starting this assignment opens a question from its first selected
+              topic. Results are saved to Progress and Feedback.
+            </p>
+          </div>
         </article>
       </section>
     </DashboardFrame>
@@ -843,8 +1072,24 @@ function StudentFeedbackPage({ page, username }) {
                 <div className="dashboard-record-card">
                   <strong>{record.result}</strong>
                   <p>{record.prompt || "Practice answer submitted."}</p>
+                  {record.feedback ? <p>{record.feedback}</p> : null}
+                  {record.commonError ? <p>Common error: {record.commonError}</p> : null}
+                  {record.workedExample ? <p>Worked example: {record.workedExample}</p> : null}
+                  {record.steps?.length ? <p>Steps: {record.steps.join(" ")}</p> : null}
                 </div>
-                <Button size="sm" variant="secondary">Practice</Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    window.localStorage.setItem(
+                      "pithonCurrentPracticeTopic",
+                      record.topicId || ""
+                    );
+                    window.location.hash = "#/student/question";
+                  }}
+                >
+                  Practice
+                </Button>
               </div>
             ))
           ) : (
@@ -855,7 +1100,13 @@ function StudentFeedbackPage({ page, username }) {
           )}
         </article>
         <article className="student-panel">
-          <EmptySlot label="Practice preview" className="is-tall" />
+          <div className="dashboard-record-card">
+            <strong>Use feedback</strong>
+            <p>
+              Press Practice on any feedback item to retry a question from the
+              same topic.
+            </p>
+          </div>
         </article>
       </section>
     </DashboardFrame>
@@ -864,6 +1115,24 @@ function StudentFeedbackPage({ page, username }) {
 
 function StudentProgressPage({ page, username }) {
   const records = useAsyncData(() => getProgress(username), [username], []);
+  const topics = useTopics();
+  const correctRecords = records.filter((record) => record.result === "correct");
+  const completionRate = records.length
+    ? Math.round((correctRecords.length / records.length) * 100)
+    : 0;
+  const topicResults = topics.map((topic) => {
+    const topicRecords = records.filter((record) => record.topicId === topic.id);
+    const topicCorrect = topicRecords.filter((record) => record.result === "correct");
+
+    return {
+      label: topic.label,
+      rate: topicRecords.length
+        ? Math.round((topicCorrect.length / topicRecords.length) * 100)
+        : null,
+    };
+  });
+  const strengths = topicResults.filter((topic) => topic.rate !== null && topic.rate >= 70);
+  const weaknesses = topicResults.filter((topic) => topic.rate !== null && topic.rate < 70);
 
   return (
     <DashboardFrame page={page} role="student">
@@ -876,11 +1145,9 @@ function StudentProgressPage({ page, username }) {
         <div className="student-progress-strip">
           <EmptySlot label={`${records.length} answered`} />
           <EmptySlot
-            label={`${records.filter((record) => record.result === "correct").length} correct`}
+            label={`${correctRecords.length} correct`}
           />
-          <EmptySlot
-            label={`${records.filter((record) => record.result === "incorrect").length} incorrect`}
-          />
+          <EmptySlot label={`${completionRate}% completion`} />
         </div>
         <article className="student-panel">
           {records.length ? (
@@ -891,6 +1158,14 @@ function StudentProgressPage({ page, username }) {
                   <p>{record.prompt || "Practice question"}</p>
                 </div>
               ))}
+              <div className="dashboard-record-card">
+                <strong>Strengths</strong>
+                <p>{strengths.map((topic) => topic.label).join(", ") || "Not enough correct answers yet."}</p>
+              </div>
+              <div className="dashboard-record-card">
+                <strong>Weaknesses</strong>
+                <p>{weaknesses.map((topic) => topic.label).join(", ") || "No clear weak topics yet."}</p>
+              </div>
             </div>
           ) : (
             <Empty
@@ -906,40 +1181,62 @@ function StudentProgressPage({ page, username }) {
 
 function StudentPracticePage({ page }) {
   const topics = useTopics();
-  const [selectedTopicId, setSelectedTopicId] = useState("arithmetic");
+  const [selectedTopicId, setSelectedTopicId] = useState("");
+  const activeTopicId = selectedTopicId || topics[0]?.id || "";
 
   return (
     <DashboardFrame page={page} role="student">
       <StudentPageHeader
         badge="Practice"
         title="Practice"
-        description="Practice choices and preview material will appear here when available."
+        description="Choose a topic and generate a practice question when you are ready."
       />
       <section className="student-practice-layout">
         <article className="student-panel student-practice-copy">
           <TopicCards
             onSelect={setSelectedTopicId}
-            selectedTopicIds={[selectedTopicId]}
+            selectedTopicIds={[activeTopicId]}
             topics={topics}
           />
-          <EmptySlot label="Practice question area" />
+          <div className="dashboard-record-card">
+            <strong>Selected topic</strong>
+            <p>
+              Press Start to generate a question for the highlighted topic.
+            </p>
+          </div>
           <div className="student-action-row">
             <Button
               onClick={() => {
+                // Practice mode is intentionally infinite and not tied to an assignment.
                 window.localStorage.setItem(
                   "pithonCurrentPracticeTopic",
-                  selectedTopicId
+                  activeTopicId
                 );
+                window.localStorage.removeItem("pithonCurrentAssignmentId");
+                window.localStorage.setItem("pithonQuestionMode", "practice");
                 window.location.hash = "#/student/question";
               }}
             >
               Start
             </Button>
-            <Button variant="secondary">Cancel</Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                window.location.hash = "#/student";
+              }}
+            >
+              Cancel
+            </Button>
           </div>
         </article>
         <article className="student-panel">
-          <EmptySlot label="Practice preview" className="is-tall" />
+          <div className="dashboard-record-card">
+            <strong>Ready when you are</strong>
+            <p>
+              Pick a topic, press Start, answer the generated question, and the
+              result will be saved to Progress and Feedback.
+            </p>
+          </div>
         </article>
       </section>
     </DashboardFrame>
@@ -948,18 +1245,44 @@ function StudentPracticePage({ page }) {
 
 function StudentQuestionPage({ page, username }) {
   const topicId =
-    window.localStorage.getItem("pithonCurrentPracticeTopic") || "arithmetic";
+    window.localStorage.getItem("pithonCurrentPracticeTopic") || "";
+  const assignmentId =
+    window.localStorage.getItem("pithonCurrentAssignmentId") || "";
+  const questionMode =
+    window.localStorage.getItem("pithonQuestionMode") === "assignment" &&
+    assignmentId
+      ? "assignment"
+      : "practice";
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
-  const question = useAsyncData(
-    () => getPracticeQuestion(topicId),
-    [topicId],
+  const [notification, setNotification] = useState(null);
+  const [questionRefreshKey, setQuestionRefreshKey] = useState(0);
+  const practiceQuestion = useAsyncData(
+    () => getPracticeQuestion(topicId, username),
+    [topicId, username, questionRefreshKey],
     null
   );
+  const delivery = useAsyncData(
+    () =>
+      questionMode === "assignment"
+        ? getQuestionDelivery(username, assignmentId)
+        : Promise.resolve(null),
+    [questionMode, assignmentId, username, questionRefreshKey],
+    null
+  );
+  const question =
+    questionMode === "assignment" ? delivery?.nextQuestion : practiceQuestion;
+  const assignmentComplete = questionMode === "assignment" && delivery?.complete;
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");
+    setNotification(null);
+
+    if (assignmentComplete) {
+      setError("This assignment set is already complete.");
+      return;
+    }
 
     if (!question) {
       setError("Question is still loading.");
@@ -968,9 +1291,15 @@ function StudentQuestionPage({ page, username }) {
 
     try {
       const result = await checkAnswer({
+        // Blank assignment ids keep practice scores out of class test results.
+        assignmentId: questionMode === "assignment" ? assignmentId : "",
         answer,
         expectedAnswer: question.expectedAnswer,
         hint: question.hint,
+        points: question.points ?? 0,
+        workedExample: question.workedExample,
+        steps: question.steps,
+        commonError: question.commonError,
         prompt: question.prompt,
         questionId: question.id,
         topicId: question.topicId,
@@ -981,7 +1310,13 @@ function StudentQuestionPage({ page, username }) {
         "pithonLastQuestionResult",
         JSON.stringify(result)
       );
-      window.location.hash = "#/student/question-finish";
+      setNotification({
+        result: result.result,
+        pointsAwarded: result.record?.pointsAwarded ?? 0,
+        pointsPossible: result.record?.pointsPossible ?? 0,
+      });
+      setAnswer("");
+      setQuestionRefreshKey((current) => current + 1);
     } catch {
       setError("Could not submit the answer. Start the backend and try again.");
     }
@@ -991,26 +1326,37 @@ function StudentQuestionPage({ page, username }) {
     <DashboardFrame page={page} role="student">
       <StudentPageHeader
         badge="Question"
-        title="Question"
-        description="Question content, answer input, and supporting visuals will appear here during practice."
+        title={questionMode === "assignment" ? "Assignment question" : "Question"}
+        description={
+          questionMode === "assignment"
+            ? "Complete the teacher's question set. Results will be sent to your teacher."
+            : "Practice keeps generating new questions until you stop."
+        }
       />
       <form className="student-question-layout" onSubmit={handleSubmit}>
         <article className="student-panel student-question-copy">
-          {question ? (
+          {assignmentComplete ? (
+            <Empty
+              title="Assignment complete"
+              description="Your saved answers and points are now available to your teacher."
+            />
+          ) : question ? (
             <div className="dashboard-record-card">
               <strong>{question.prompt}</strong>
-              <p>{question.hint}</p>
+              <p>
+                Difficulty: {question.difficulty || "standard"} -{" "}
+                {question.points ?? 0} points
+              </p>
+              {questionMode === "assignment" ? (
+                <p>
+                  Question {(delivery?.completedCount ?? 0) + 1} of{" "}
+                  {delivery?.limit ?? 0}
+                </p>
+              ) : null}
             </div>
           ) : (
             <EmptySlot label="Question content" />
           )}
-          <div className="student-action-row">
-            <Button type="submit">Submit</Button>
-            {error ? <p className="auth-error">{error}</p> : null}
-          </div>
-        </article>
-        <article className="student-panel student-question-side">
-          <EmptySlot label={question?.visualLabel || "Question image"} />
           <label className="dashboard-form-field">
             Answer
             <input
@@ -1020,6 +1366,45 @@ function StudentQuestionPage({ page, username }) {
               value={answer}
             />
           </label>
+          <div className="student-action-row">
+            <Button type="submit">Submit</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                window.location.hash =
+                  questionMode === "assignment"
+                    ? "#/student/assignments"
+                    : "#/student/practice";
+              }}
+            >
+              Stop
+            </Button>
+            {error ? <p className="auth-error">{error}</p> : null}
+          </div>
+          {notification ? (
+            <div
+              className={`question-result-notice is-${notification.result}`}
+              role="status"
+            >
+              <strong>
+                {notification.result === "correct" ? "Correct" : "Incorrect"}
+              </strong>
+              <p>
+                {notification.pointsAwarded} / {notification.pointsPossible}{" "}
+                points saved
+              </p>
+            </div>
+          ) : null}
+        </article>
+        <article className="student-panel student-question-side">
+          <EmptySlot label={question?.visualLabel || "Question image"} />
+          {question?.hint ? (
+            <div className="dashboard-record-card">
+              <strong>Hint</strong>
+              <p>{question.hint}</p>
+            </div>
+          ) : null}
         </article>
       </form>
     </DashboardFrame>
@@ -1040,7 +1425,18 @@ function StudentQuestionFinishPage({ page }) {
   return (
     <DashboardFrame page={page} role="student">
       <section className="student-finish-panel">
-        <EmptySlot label="Result image" />
+        <div className="dashboard-record-card">
+          <strong>{result?.record?.answer || "No answer saved"}</strong>
+          <p>Your submitted answer</p>
+        </div>
+        {result?.record ? (
+          <div className="dashboard-record-card">
+            <strong>
+              {result.record.pointsAwarded ?? 0} / {result.record.pointsPossible ?? 0}
+            </strong>
+            <p>Points earned</p>
+          </div>
+        ) : null}
         <Empty
           title={result ? `Answer ${result.result}` : "Question complete"}
           description={
@@ -1049,12 +1445,19 @@ function StudentQuestionFinishPage({ page }) {
           }
         />
         <Button
-          variant="secondary"
           onClick={() => {
-            window.location.hash = "#/student";
+            window.location.hash = "#/student/practice";
           }}
         >
-          Home
+          Try another
+        </Button>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            window.location.hash = "#/student/progress";
+          }}
+        >
+          View progress
         </Button>
       </section>
     </DashboardFrame>
@@ -1066,6 +1469,12 @@ function StudentDashboardPage({ page, username }) {
 
   if (view === "profile") {
     return <StudentProfilePage page={page} username={username} />;
+  }
+  if (view === "classes") {
+    return <StudentClassesPage page={page} username={username} />;
+  }
+  if (view === "classes/scoreboard") {
+    return <ClassScoreboardPage page={page} role="student" />;
   }
   if (view === "assignments") {
     return <StudentAssignmentsPage page={page} username={username} />;
@@ -1093,6 +1502,14 @@ function StudentDashboardPage({ page, username }) {
 }
 
 function TeacherProfilePage({ page, username }) {
+  const classes = useAsyncData(() => getClasses(username), [username], []);
+  const topics = useTopics();
+  const assignments = useAsyncData(
+    () => getAssignments("teacher", username),
+    [username],
+    []
+  );
+
   return (
     <DashboardFrame page={page} role="teacher">
       <StudentPageHeader
@@ -1106,16 +1523,27 @@ function TeacherProfilePage({ page, username }) {
             {(username || "T").slice(0, 1).toUpperCase()}
           </div>
           <div className="dashboard-field-stack">
-            <EmptySlot label="Display name" />
-            <EmptySlot label="Email" />
-            <EmptySlot label="School" />
+            <div className="dashboard-record-card">
+              <strong>{username || "Teacher"}</strong>
+              <p>Signed in teacher account</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>{classes.length}</strong>
+              <p>Classes created</p>
+            </div>
           </div>
         </article>
         <article className="dashboard-panel">
-          <Empty
-            title="No profile details yet"
-            description="Teaching areas, classes, and account notes will appear here."
-          />
+          <div className="dashboard-list-stack">
+            <div className="dashboard-record-card">
+              <strong>{assignments.length}</strong>
+              <p>Assignments created</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>Question topics</strong>
+              <p>{formatTopicLabels(topics.map((topic) => topic.id), topics)}</p>
+            </div>
+          </div>
         </article>
       </section>
     </DashboardFrame>
@@ -1141,6 +1569,16 @@ function TeacherClassesPage({ page, username }) {
               {classRecord.subject || "No subject"}
             </p>
             <Badge label={classRecord.inviteCode} variant="outline" />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                window.localStorage.setItem("pithonCurrentClassId", classRecord.id);
+                window.location.hash = "#/teacher/classes/scoreboard";
+              }}
+            >
+              Scoreboard
+            </Button>
           </div>
         ))}
         <a className="dashboard-add-card" href="#/teacher/classes/create">
@@ -1166,11 +1604,11 @@ function TeacherClassCreatorPage({ page, username }) {
         name: String(formData.get("name") || "").trim(),
         yearGroup: String(formData.get("yearGroup") || "").trim(),
         subject: String(formData.get("subject") || "").trim(),
-        teacherUsername: username,
+        teacherUsername: username || "teacher",
       });
       window.location.hash = "#/teacher/classes";
-    } catch {
-      setError("Could not save the class. Start the backend and try again.");
+    } catch (classError) {
+      setError(classError.message || "Could not save the class.");
     }
   };
 
@@ -1179,7 +1617,7 @@ function TeacherClassCreatorPage({ page, username }) {
       <StudentPageHeader
         badge="Create class"
         title="Class creator"
-        description="Class name, invite details, and optional cover material can be added here."
+        description="Create an empty class record that can hold students later."
       />
       <section className="teacher-creator-layout">
         <form className="dashboard-panel teacher-form-panel" onSubmit={handleSubmit}>
@@ -1199,6 +1637,7 @@ function TeacherClassCreatorPage({ page, username }) {
           <div className="student-action-row">
             <Button type="submit">Save</Button>
             <Button
+              type="button"
               variant="secondary"
               onClick={() => {
                 window.location.hash = "#/teacher/classes";
@@ -1209,7 +1648,16 @@ function TeacherClassCreatorPage({ page, username }) {
           </div>
         </form>
         <article className="dashboard-panel">
-          <EmptySlot label="Class image" className="is-tall" />
+          <div className="dashboard-list-stack">
+            <div className="dashboard-record-card">
+              <strong>Invite code</strong>
+              <p>A short invite code is generated automatically when saved.</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>Students</strong>
+              <p>Students can be linked to this class when enrolment is added.</p>
+            </div>
+          </div>
         </article>
       </section>
     </DashboardFrame>
@@ -1222,6 +1670,7 @@ function TeacherAssignmentsPage({ page, username }) {
     [username],
     []
   );
+  const topics = useTopics();
 
   return (
     <DashboardFrame page={page} role="teacher">
@@ -1235,10 +1684,35 @@ function TeacherAssignmentsPage({ page, username }) {
           <div className="dashboard-record-card" key={assignment.id}>
             <strong>{assignment.title || "Untitled assignment"}</strong>
             <p>{assignment.instructions || "No instructions added."}</p>
+            {assignment.dueDate ? <p>Due {assignment.dueDate}</p> : null}
+            <p>{assignment.questionLimit ?? assignment.questionIds?.length ?? 0} questions</p>
             <Badge
-              label={assignment.topicIds?.join(", ") || "No topic"}
+              label={formatTopicLabels(assignment.topicIds, topics)}
               variant="outline"
             />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                window.localStorage.setItem("pithonCurrentTeacherAssignmentId", assignment.id);
+                window.location.hash = "#/teacher/assignments/edit";
+              }}
+            >
+              Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                window.localStorage.setItem(
+                  "pithonCurrentTeacherAssignmentId",
+                  assignment.id
+                );
+                window.location.hash = "#/teacher/assignments/results";
+              }}
+            >
+              Results
+            </Button>
           </div>
         ))}
         <a className="dashboard-add-card" href="#/teacher/assignments/create">
@@ -1251,16 +1725,35 @@ function TeacherAssignmentsPage({ page, username }) {
 }
 
 function TeacherAssignmentCreatorPage({ page, username }) {
+  const isEditing = page.endsWith("/edit");
   const topics = useTopics();
   const classes = useAsyncData(() => getClasses(username), [username], []);
-  const [selectedTopicIds, setSelectedTopicIds] = useState(["arithmetic"]);
+  const assignments = useAsyncData(
+    () => getAssignments("teacher", username),
+    [username],
+    []
+  );
+  const editingAssignmentId = window.localStorage.getItem(
+    "pithonCurrentTeacherAssignmentId"
+  );
+  const editingAssignment = assignments.find(
+    (assignment) => assignment.id === editingAssignmentId
+  );
+  const [selectedTopicIds, setSelectedTopicIds] = useState([]);
   const [error, setError] = useState("");
+  const activeTopicIds = selectedTopicIds.length
+    ? selectedTopicIds
+    : editingAssignment?.topicIds?.length
+      ? editingAssignment.topicIds
+      : topics[0]?.id
+      ? [topics[0].id]
+      : [];
 
   const toggleTopic = (topicId) => {
     setSelectedTopicIds((current) =>
-      current.includes(topicId)
-        ? current.filter((item) => item !== topicId)
-        : [...current, topicId]
+      (current.length ? current : activeTopicIds).includes(topicId)
+        ? (current.length ? current : activeTopicIds).filter((item) => item !== topicId)
+        : [...(current.length ? current : activeTopicIds), topicId]
     );
   };
 
@@ -1268,19 +1761,34 @@ function TeacherAssignmentCreatorPage({ page, username }) {
     event.preventDefault();
     setError("");
 
+    if (!activeTopicIds.length) {
+      setError("Choose at least one topic.");
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
 
     try {
-      await createAssignment({
+      const payload = {
         classId: String(formData.get("classId") || ""),
+        dueDate: String(formData.get("dueDate") || ""),
         instructions: String(formData.get("instructions") || "").trim(),
+        questionLimit: Number(formData.get("questionLimit") || 5),
         teacherUsername: username,
         title: String(formData.get("title") || "").trim(),
-        topicIds: selectedTopicIds,
-      });
+        topicIds: activeTopicIds,
+      };
+
+      // Editing rebuilds the stored question set only when topics or limit change.
+      if (isEditing && editingAssignment) {
+        await updateAssignment(editingAssignment.id, payload);
+      } else {
+        await createAssignment(payload);
+      }
+
       window.location.hash = "#/teacher/assignments";
     } catch {
-      setError("Could not save the assignment. Start the backend and try again.");
+      setError("Could not save the assignment. Check the backend and try again.");
     }
   };
 
@@ -1288,18 +1796,23 @@ function TeacherAssignmentCreatorPage({ page, username }) {
     <DashboardFrame page={page} role="teacher">
       <StudentPageHeader
         badge="Create assignment"
-        title="Assignment creator"
-        description="Assignment instructions, class selection, and resource previews can be configured here."
+        title={isEditing ? "Edit assignment" : "Assignment creator"}
+        description="Set the class, topics, and instructions for a new assignment."
       />
       <section className="teacher-creator-layout">
         <form className="dashboard-panel teacher-form-panel" onSubmit={handleSubmit}>
           <label className="dashboard-form-field">
             Assignment title
-            <input name="title" required type="text" />
+            <input
+              defaultValue={editingAssignment?.title || ""}
+              name="title"
+              required
+              type="text"
+            />
           </label>
           <label className="dashboard-form-field">
             Class
-            <select name="classId">
+            <select defaultValue={editingAssignment?.classId || ""} name="classId">
               <option value="">All students</option>
               {classes.map((classRecord) => (
                 <option key={classRecord.id} value={classRecord.id}>
@@ -1309,19 +1822,49 @@ function TeacherAssignmentCreatorPage({ page, username }) {
             </select>
           </label>
           <label className="dashboard-form-field">
+            Due date
+            <input
+              defaultValue={editingAssignment?.dueDate || ""}
+              name="dueDate"
+              type="date"
+            />
+          </label>
+          <label className="dashboard-form-field">
+            Question limit
+            <input
+              defaultValue={editingAssignment?.questionLimit || 5}
+              max="50"
+              min="1"
+              name="questionLimit"
+              required
+              type="number"
+            />
+          </label>
+          <label className="dashboard-form-field">
             Instructions
-            <textarea name="instructions" rows="4" />
+            <textarea
+              defaultValue={editingAssignment?.instructions || ""}
+              name="instructions"
+              rows="4"
+            />
           </label>
           <TopicCards
             onSelect={toggleTopic}
-            selectedTopicIds={selectedTopicIds}
+            selectedTopicIds={activeTopicIds}
             topics={topics}
           />
-          <EmptySlot label="Question set" />
+          <div className="dashboard-record-card">
+            <strong>Question set</strong>
+            <p>
+              Saving creates an assignment using the selected topics. Student
+              practice questions are generated from those topics.
+            </p>
+          </div>
           {error ? <p className="auth-error">{error}</p> : null}
           <div className="student-action-row">
-            <Button type="submit">Save</Button>
+            <Button type="submit">{isEditing ? "Update" : "Save"}</Button>
             <Button
+              type="button"
               variant="secondary"
               onClick={() => {
                 window.location.hash = "#/teacher/assignments";
@@ -1332,14 +1875,93 @@ function TeacherAssignmentCreatorPage({ page, username }) {
           </div>
         </form>
         <article className="dashboard-panel">
-          <EmptySlot label="Assignment image" className="is-tall" />
+          <div className="dashboard-list-stack">
+            <div className="dashboard-record-card">
+              <strong>Available topics</strong>
+              <p>{formatTopicLabels(topics.map((topic) => topic.id), topics)}</p>
+            </div>
+            <div className="dashboard-record-card">
+              <strong>Publishing</strong>
+              <p>Assignments saved here immediately appear for students.</p>
+            </div>
+          </div>
         </article>
       </section>
     </DashboardFrame>
   );
 }
 
-function TeacherAnalyticsPage({ page }) {
+function TeacherAssignmentResultsPage({ page }) {
+  const assignmentId =
+    window.localStorage.getItem("pithonCurrentTeacherAssignmentId") || "";
+  const results = useAsyncData(
+    () => (assignmentId ? getAssignmentResults(assignmentId) : Promise.resolve(null)),
+    [assignmentId],
+    null
+  );
+  const rows = results?.rows ?? [];
+
+  return (
+    <DashboardFrame page={page} role="teacher">
+      <StudentPageHeader
+        badge="Results"
+        title={results?.assignment?.title || "Assignment results"}
+        description="Student results for this question set appear here as they submit answers."
+      />
+      <section className="teacher-analytics-layout">
+        <div className="teacher-analytics-strip">
+          <EmptySlot label={`${rows.length} students`} />
+          <EmptySlot
+            label={`${rows.filter((row) => row.complete).length} complete`}
+          />
+          <EmptySlot label={`${results?.assignment?.questionLimit ?? 0} questions`} />
+        </div>
+        <article className="dashboard-panel">
+          {rows.length ? (
+            <div className="dashboard-list-stack">
+              {rows.map((row) => (
+                <div className="dashboard-record-card" key={row.username}>
+                  <strong>{row.username}</strong>
+                  <p>
+                    {row.points} / {row.pointsPossible} points - {row.correct}{" "}
+                    correct from {row.answered} answered
+                  </p>
+                  <Badge
+                    label={row.complete ? "Complete" : "In progress"}
+                    variant="outline"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty
+              title="No student results yet"
+              description="Results will appear after students start this assignment."
+            />
+          )}
+          <div className="student-action-row">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                window.location.hash = "#/teacher/assignments";
+              }}
+            >
+              Back to assignments
+            </Button>
+          </div>
+        </article>
+      </section>
+    </DashboardFrame>
+  );
+}
+
+function TeacherAnalyticsPage({ page, username }) {
+  const analytics = useAsyncData(
+    () => getTeacherAnalytics(username),
+    [username],
+    { assignments: [], classes: [], records: [], stats: [] }
+  );
+
   return (
     <DashboardFrame page={page} role="teacher">
       <StudentPageHeader
@@ -1349,16 +1971,86 @@ function TeacherAnalyticsPage({ page }) {
       />
       <section className="teacher-analytics-layout">
         <div className="teacher-analytics-strip">
-          {Array.from({ length: 3 }, (_, index) => (
-            <EmptySlot label="Insight card" key={index} />
+          {(analytics.stats.length
+            ? analytics.stats
+            : [
+                { label: "Classes", value: 0 },
+                { label: "Assignments", value: 0 },
+                { label: "Answers", value: 0 },
+              ]
+          ).map((stat) => (
+            <EmptySlot label={`${stat.value} ${stat.label}`} key={stat.label} />
           ))}
         </div>
         <article className="dashboard-panel">
-          <Empty
-            title="No analytics yet"
-            description="Class and assignment activity will fill this analytics area."
-          />
+          {analytics.records.length ? (
+            <div className="dashboard-list-stack">
+              {analytics.records.slice().reverse().map((record) => (
+                <div className="dashboard-record-card" key={record.id}>
+                  <strong>{record.result}</strong>
+                  <p>{record.prompt || "Practice answer"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Empty
+              title="No answer records yet"
+              description="Student submissions will appear here after practice."
+            />
+          )}
         </article>
+      </section>
+    </DashboardFrame>
+  );
+}
+
+function ClassScoreboardPage({ page, role }) {
+  const classId = window.localStorage.getItem("pithonCurrentClassId") || "";
+  const scoreboard = useAsyncData(
+    () => (classId ? getClassScoreboard(classId) : Promise.resolve(null)),
+    [classId],
+    null
+  );
+  const rows = scoreboard?.rows ?? [];
+
+  return (
+    <DashboardFrame page={page} role={role}>
+      <StudentPageHeader
+        badge="Scoreboard"
+        title={scoreboard?.class?.name || "Class scoreboard"}
+        description="Points from completed class questions appear here."
+      />
+      <section className="dashboard-panel">
+        {rows.length ? (
+          <div className="dashboard-list-stack">
+            {rows.map((row, index) => (
+              <div className="dashboard-record-card" key={row.username}>
+                <strong>
+                  {index + 1}. {row.username}
+                </strong>
+                <p>
+                  {row.points} points - {row.correct} correct from{" "}
+                  {row.answered} answered
+                </p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Empty
+            title="No points yet"
+            description="Students will appear here after they complete questions for this class."
+          />
+        )}
+        <div className="student-action-row">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              window.location.hash = `#/${role}/classes`;
+            }}
+          >
+            Back to classes
+          </Button>
+        </div>
       </section>
     </DashboardFrame>
   );
@@ -1376,20 +2068,30 @@ function TeacherDashboardPage({ page, username }) {
   if (view === "classes/create") {
     return <TeacherClassCreatorPage page={page} username={username} />;
   }
+  if (view === "classes/scoreboard") {
+    return <ClassScoreboardPage page={page} role="teacher" />;
+  }
   if (view === "assignments") {
     return <TeacherAssignmentsPage page={page} username={username} />;
   }
   if (view === "assignments/create") {
     return <TeacherAssignmentCreatorPage page={page} username={username} />;
   }
+  if (view === "assignments/edit") {
+    return <TeacherAssignmentCreatorPage page={page} username={username} />;
+  }
+  if (view === "assignments/results") {
+    return <TeacherAssignmentResultsPage page={page} />;
+  }
   if (view === "analytics") {
-    return <TeacherAnalyticsPage page={page} />;
+    return <TeacherAnalyticsPage page={page} username={username} />;
   }
 
   return <DashboardHomePage page={page} role="teacher" username={username} />;
 }
 
 function ProtectedDashboardPage({ currentRole, page, role, username }) {
+  // Role-specific pages are isolated so students and teachers cannot cross views.
   if (currentRole !== role) {
     return <Login />;
   }
@@ -1414,6 +2116,7 @@ function App() {
   const currentRole = getCurrentRole();
   const currentUsername = getCurrentUsername();
   const effectivePage = currentRole
+    // Logged-in users stay inside their own dashboard instead of public pages.
     ? isRoleRoute(page, currentRole)
       ? page
       : currentRole

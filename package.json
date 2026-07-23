@@ -6,9 +6,11 @@
   "scripts": {
     "backend": "node server/server.js",
     "dev": "vite",
+    "frontend": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server/server.js"
   },
   "dependencies": {
     "react": "^19.2.4",

@@ -1,66 +1,148 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.join(__dirname, "data");
+const databasePath = path.join(dataDir, "pithon.sqlite");
 
-const dataFiles = {
+// Each app domain is stored as JSON in one SQLite table, keyed by collection.
+const collections = {
+  users: "users",
+  assignments: "assignments",
+  classes: "classes",
+  topics: "topics",
+  questions: "questions",
+  studentRecords: "student_records",
+  feedbackLibrary: "feedback_library",
+  notifications: "notifications",
+  sessions: "sessions",
+};
+
+const legacyDataFiles = {
   users: "users.json",
   assignments: "assignments.json",
   classes: "classes.json",
+  topics: "topics.json",
   questions: "questions.json",
   studentRecords: "student-records.json",
   feedbackLibrary: "feedback-library.json",
+  notifications: "notifications.json",
   sessions: "sessions.json",
 };
+const refreshSeedCollections = new Set([
+  "topics",
+  "questions",
+  "feedbackLibrary",
+  "notifications",
+]);
 
-async function readCollection(name) {
-  const filePath = path.join(dataDir, dataFiles[name]);
+mkdirSync(dataDir, { recursive: true });
 
-  try {
-    const file = await readFile(filePath, "utf8");
-    return JSON.parse(file);
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      await mkdir(dataDir, { recursive: true });
-      await writeFile(filePath, "[]");
-      return [];
+const database = new DatabaseSync(databasePath);
+
+database.exec(`
+  CREATE TABLE IF NOT EXISTS records (
+    collection TEXT NOT NULL,
+    id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    data TEXT NOT NULL,
+    PRIMARY KEY (collection, id)
+  );
+`);
+
+const countStatement = database.prepare(
+  "SELECT COUNT(*) AS count FROM records WHERE collection = ?"
+);
+const selectAllStatement = database.prepare(
+  "SELECT data FROM records WHERE collection = ? ORDER BY created_at ASC"
+);
+const insertStatement = database.prepare(`
+  INSERT INTO records (collection, id, created_at, data)
+  VALUES (?, ?, ?, ?)
+  ON CONFLICT(collection, id) DO UPDATE SET
+    created_at = excluded.created_at,
+    data = excluded.data
+`);
+const deleteCollectionStatement = database.prepare(
+  "DELETE FROM records WHERE collection = ?"
+);
+
+// Seed files give the app useful starter content without owning user data.
+function readLegacyRecords(name) {
+  const filePath = path.join(dataDir, legacyDataFiles[name]);
+
+  if (!existsSync(filePath)) {
+    return [];
+  }
+
+  return JSON.parse(readFileSync(filePath, "utf8"));
+}
+
+function normalizeRecord(record) {
+  return {
+    id: record.id ?? randomUUID(),
+    createdAt: record.createdAt ?? new Date().toISOString(),
+    ...record,
+  };
+}
+
+function saveRecord(collection, record) {
+  const nextRecord = normalizeRecord(record);
+
+  insertStatement.run(
+    collection,
+    nextRecord.id,
+    nextRecord.createdAt,
+    JSON.stringify(nextRecord)
+  );
+
+  return nextRecord;
+}
+
+function seedFromLegacyJson() {
+  for (const [name, collection] of Object.entries(collections)) {
+    const { count } = countStatement.get(collection);
+
+    if (count > 0 && !refreshSeedCollections.has(name)) {
+      continue;
     }
 
-    throw error;
+    for (const record of readLegacyRecords(name)) {
+      saveRecord(collection, record);
+    }
   }
 }
 
-async function writeCollection(name, records) {
-  const filePath = path.join(dataDir, dataFiles[name]);
+seedFromLegacyJson();
 
-  await mkdir(dataDir, { recursive: true });
-  await writeFile(filePath, `${JSON.stringify(records, null, 2)}\n`);
-}
-
+// Small repository facade keeps the service layer independent of SQLite syntax.
 function createRepository(name) {
+  const collection = collections[name];
+
   return {
     async all() {
-      return readCollection(name);
+      return selectAllStatement
+        .all(collection)
+        .map((row) => JSON.parse(row.data));
     },
     async insert(record) {
-      const records = await readCollection(name);
-      const nextRecord = {
-        id: record.id ?? randomUUID(),
-        createdAt: record.createdAt ?? new Date().toISOString(),
-        ...record,
-      };
-
-      records.push(nextRecord);
-      await writeCollection(name, records);
-
-      return nextRecord;
+      return saveRecord(collection, record);
     },
     async replaceAll(records) {
-      await writeCollection(name, records);
-      return records;
+      database.exec("BEGIN IMMEDIATE");
+
+      try {
+        deleteCollectionStatement.run(collection);
+        const nextRecords = records.map((record) => saveRecord(collection, record));
+        database.exec("COMMIT");
+        return nextRecords;
+      } catch (error) {
+        database.exec("ROLLBACK");
+        throw error;
+      }
     },
   };
 }
@@ -69,8 +151,10 @@ export const repositories = {
   users: createRepository("users"),
   assignments: createRepository("assignments"),
   classes: createRepository("classes"),
+  topics: createRepository("topics"),
   questions: createRepository("questions"),
   studentRecords: createRepository("studentRecords"),
   feedbackLibrary: createRepository("feedbackLibrary"),
+  notifications: createRepository("notifications"),
   sessions: createRepository("sessions"),
 };

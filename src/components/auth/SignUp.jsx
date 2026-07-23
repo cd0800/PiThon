@@ -5,23 +5,32 @@ import { AuthShell } from "./AuthShell.jsx";
 
 export function SignUp() {
   const [role, setRole] = useState("student");
+  const [error, setError] = useState("");
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setError("");
     const formData = new FormData(event.currentTarget);
     const pendingUser = {
       email: String(formData.get("email") || "").trim(),
+      password: String(formData.get("password") || ""),
       username: String(formData.get("username") || "").trim(),
       role,
     };
 
-    try {
-      await requestEmailVerification(pendingUser);
-    } catch {
-      // Keep the local demo flow available when the API server is not running.
+    if (!pendingUser.username || !pendingUser.email || !pendingUser.password) {
+      setError("Username, email, and password are required.");
+      return;
     }
 
-    window.localStorage.setItem(
+    try {
+      await requestEmailVerification(pendingUser);
+    } catch (signupError) {
+      setError(signupError.message || "Could not start verification.");
+      return;
+    }
+
+    window.sessionStorage.setItem(
       "pithonPendingVerification",
       JSON.stringify(pendingUser)
     );
@@ -46,16 +55,17 @@ export function SignUp() {
         </div>
         <label>
           Username
-          <input autoComplete="username" name="username" type="text" />
+          <input autoComplete="username" name="username" required type="text" />
         </label>
         <label>
           Password
-          <input autoComplete="new-password" name="password" type="password" />
+          <input autoComplete="new-password" name="password" required type="password" />
         </label>
         <label>
           Email
-          <input autoComplete="email" name="email" type="email" />
+          <input autoComplete="email" name="email" required type="email" />
         </label>
+        {error ? <p className="auth-error">{error}</p> : null}
         <Button type="submit">Continue</Button>
       </form>
       <p className="auth-switch">

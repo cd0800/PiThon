@@ -6,7 +6,7 @@ export function PasswordReset() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
 
-    window.localStorage.setItem(
+    window.sessionStorage.setItem(
       "pithonPendingVerification",
       JSON.stringify({
         email: formData.get("email"),

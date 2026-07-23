@@ -10,7 +10,7 @@ export function EmailVerification() {
   const pendingVerification = useMemo(() => {
     try {
       return JSON.parse(
-        window.localStorage.getItem("pithonPendingVerification") || "{}"
+        window.sessionStorage.getItem("pithonPendingVerification") || "{}"
       );
     } catch {
       return {};
@@ -32,24 +32,32 @@ export function EmailVerification() {
 
     const role = pendingVerification.role === "teacher" ? "teacher" : "student";
 
+    let result;
+
     try {
-      const result = await verifyEmailCode({
+      result = await verifyEmailCode({
         code: enteredCode,
         email: pendingVerification.email,
+        password: pendingVerification.password,
         role,
         username: pendingVerification.username,
       });
-
-      if (!result.verified) {
-        setError(result.reason || "Verification failed.");
-        return;
-      }
-    } catch {
-      // Keep the local demo flow available when the API server is not running.
+    } catch (verificationError) {
+      setError(verificationError.message || "Verification failed.");
+      return;
     }
 
-    window.localStorage.removeItem("pithonPendingVerification");
+    if (!result.verified) {
+      setError(result.reason || "Verification failed.");
+      return;
+    }
+
+    window.sessionStorage.removeItem("pithonPendingVerification");
     window.localStorage.setItem("pithonCurrentRole", role);
+    if (result.token) {
+      window.localStorage.removeItem("pithonAuthToken");
+      window.sessionStorage.setItem("pithonAuthToken", result.token);
+    }
     window.localStorage.setItem(
       "pithonCurrentUsername",
       pendingVerification.username || ""
